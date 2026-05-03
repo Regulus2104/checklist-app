@@ -1,63 +1,5 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <title>Checklist App</title>
-  <style>
-    body {
-      font-family: Arial;
-      padding: 20px;
-    }
-    h3 {
-      margin-top: 25px;
-    }
-    table {
-      border-collapse: collapse;
-      width: 700px;
-      margin-bottom: 20px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th:first-child, td:first-child {
-      text-align: left;
-    }
-    .si {
-      background-color: #4CAF50;
-      color: white;
-    }
-    .no {
-      background-color: #f44336;
-      color: white;
-    }
-    .clickable {
-      cursor: pointer;
-    }
-    input {
-      width: 100%;
-      border: none;
-      outline: none;
-    }
-    button {
-      margin-right: 10px;
-      padding: 10px;
-      cursor: pointer;
-    }
-  </style>
-</head>
-<body>
-
-<h2>Checklist Diario</h2>
-
-<div id="contenedor"></div>
-
-<button onclick="descargar()">Descargar Excel</button>
-<button onclick="limpiar()">Limpiar todo</button>
-
 <script>
-const listas = {
+const LISTAS_BASE = {
   "Cosas del colegio": [
     "Casaca de buzo","Pantalon de buzo","3 polos manga larga","3 polos manga corta",
     "Short","Polera","2 pares de medias","Gorro","Toalla de aseo","Bolsa de aseo",
@@ -77,7 +19,13 @@ const listas = {
   ]
 };
 
+// cargar listas guardadas o usar base
+let listas = JSON.parse(localStorage.getItem("listas")) || structuredClone(LISTAS_BASE);
 let estado = JSON.parse(localStorage.getItem("checklist")) || {};
+
+function guardarListas() {
+  localStorage.setItem("listas", JSON.stringify(listas));
+}
 
 function render() {
   const contenedor = document.getElementById("contenedor");
@@ -88,6 +36,14 @@ function render() {
     titulo.textContent = lista;
     contenedor.appendChild(titulo);
 
+    // input agregar item
+    const inputDiv = document.createElement("div");
+    inputDiv.innerHTML = `
+      <input type="text" id="input-${lista}" placeholder="Agregar item">
+      <button onclick="agregarItem('${lista}')">➕ Agregar</button>
+    `;
+    contenedor.appendChild(inputDiv);
+
     const tabla = document.createElement("table");
     tabla.innerHTML = `
       <tr>
@@ -95,26 +51,52 @@ function render() {
         <th>Si</th>
         <th>No</th>
         <th>Observaciones</th>
+        <th>Eliminar</th>
       </tr>
     `;
 
-    listas[lista].forEach(item => {
+    listas[lista].forEach((item, index) => {
       const key = lista + "|" + item;
-      const row = tabla.insertRow();
 
       const val = estado[key]?.valor || "";
       const obs = estado[key]?.obs || "";
+
+      const row = tabla.insertRow();
 
       row.innerHTML = `
         <td>${item}</td>
         <td class="clickable ${val === 'Si' ? 'si' : ''}" onclick="marcar('${key}','Si')">✔</td>
         <td class="clickable ${val === 'No' ? 'no' : ''}" onclick="marcar('${key}','No')">✖</td>
         <td><input type="text" value="${obs}" oninput="guardarObs('${key}', this.value)"></td>
+        <td><button onclick="eliminarItem('${lista}', ${index})">🗑</button></td>
       `;
     });
 
     contenedor.appendChild(tabla);
   });
+}
+
+function agregarItem(lista) {
+  const input = document.getElementById("input-" + lista);
+  const valor = input.value.trim();
+  if (!valor) return;
+
+  listas[lista].push(valor);
+  guardarListas();
+  input.value = "";
+  render();
+}
+
+function eliminarItem(lista, index) {
+  const item = listas[lista][index];
+  const key = lista + "|" + item;
+
+  listas[lista].splice(index, 1);
+  delete estado[key];
+
+  guardarListas();
+  localStorage.setItem("checklist", JSON.stringify(estado));
+  render();
 }
 
 function marcar(key, valor) {
@@ -132,7 +114,11 @@ function guardarObs(key, texto) {
 
 function limpiar() {
   localStorage.removeItem("checklist");
+  localStorage.removeItem("listas");
+
+  listas = structuredClone(LISTAS_BASE);
   estado = {};
+
   render();
 }
 
@@ -140,26 +126,19 @@ function descargar() {
   let contenido = "Lista,Item,Estado,Observacion\n";
 
   Object.keys(estado).forEach(key => {
-    const [lista, item] = key.split("|");
-    const valor = estado[key].valor || "";
-    const obs = estado[key].obs || "";
-
-    if (valor !== "") { // exporta tanto Si como No
-      contenido += `${lista},${item},${valor},${obs}\n`;
+    if (estado[key].valor === "Si") {
+      const [lista, item] = key.split("|");
+      const obs = estado[key].obs || "";
+      contenido += `${lista},${item},Si,${obs}\n`;
     }
   });
-
-  if (contenido === "Lista,Item,Estado,Observacion\n") {
-    alert("No hay datos seleccionados");
-    return;
-  }
 
   let blob = new Blob([contenido], { type: 'text/csv' });
   let url = URL.createObjectURL(blob);
 
   let a = document.createElement("a");
   a.href = url;
-  a.download = "checklist_completo.csv";
+  a.download = "checklist.csv";
   a.click();
 
   URL.revokeObjectURL(url);
@@ -167,6 +146,3 @@ function descargar() {
 
 render();
 </script>
-
-</body>
-</html>
