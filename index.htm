@@ -140,15 +140,17 @@ function descargar() {
   let contenido = "Lista,Item,Estado,Observacion\n";
 
   Object.keys(estado).forEach(key => {
-    if (estado[key].valor === "Si") {
-      const [lista, item] = key.split("|");
-      const obs = estado[key].obs || "";
-      contenido += `${lista},${item},Si,${obs}\n`;
+    const [lista, item] = key.split("|");
+    const valor = estado[key].valor || "";
+    const obs = estado[key].obs || "";
+
+    if (valor !== "") { // exporta tanto Si como No
+      contenido += `${lista},${item},${valor},${obs}\n`;
     }
   });
 
   if (contenido === "Lista,Item,Estado,Observacion\n") {
-    alert("No hay 'Sí' seleccionados");
+    alert("No hay datos seleccionados");
     return;
   }
 
@@ -157,7 +159,7 @@ function descargar() {
 
   let a = document.createElement("a");
   a.href = url;
-  a.download = "checklist.csv";
+  a.download = "checklist_completo.csv";
   a.click();
 
   URL.revokeObjectURL(url);
