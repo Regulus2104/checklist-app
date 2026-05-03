@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Checklist App</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+    }
+    h3 {
+      margin-top: 25px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 520px;
+      margin-bottom: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+    .si {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .no {
+      background-color: #f44336;
+      color: white;
+    }
+    .clickable {
+      cursor: pointer;
+    }
+    button {
+      margin-right: 10px;
+      padding: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Checklist Diario</h2>
+
+<div id="contenedor"></div>
+
+<button onclick="descargar()">Descargar Excel</button>
+<button onclick="limpiar()">Limpiar todo</button>
+
+<script>
+const listas = {
+  "Cosas del colegio": [
+    "Casaca de buzo","Pantalon de buzo","3 polos manga larga","3 polos manga corta",
+    "Short","Polera","2 pares de medias","Gorro","Toalla de aseo","Bolsa de aseo",
+    "Pañitos húmedos","Mandil para pintura","Mochila","Lonchera","Tapers de lonchera",
+    "Cubierto","Toma todos","Carnet naranja de salida","Cuadernos",
+    "Cartuchera llena con lo faltante","Libros","Folder marron","Tareas físicas"
+  ],
+  "Cosas de la natación": [
+    "Shorts de ropa de baño","Polo de ropa de baño","Gorro","Lentes",
+    "Carnet de asistencia","Toalla de baño","Sandalias de baño"
+  ],
+  "Cosas de la terapia": [
+    "Folder naranja","Tareas desarrolladas"
+  ],
+  "Cosas propias diarias": [
+    "Plantillas para los zapato","Vitaminas","Los libros preferidos","Juguetes que llevará"
+  ]
+};
+
+let estado = JSON.parse(localStorage.getItem("checklist")) || {};
+
+function render() {
+  const contenedor = document.getElementById("contenedor");
+  contenedor.innerHTML = "";
+
+  Object.keys(listas).forEach(lista => {
+    const titulo = document.createElement("h3");
+    titulo.textContent = lista;
+    contenedor.appendChild(titulo);
+
+    const tabla = document.createElement("table");
+    tabla.innerHTML = `
+      <tr>
+        <th>Item</th>
+        <th>Si</th>
+        <th>No</th>
+      </tr>
+    `;
+
+    listas[lista].forEach(item => {
+      const key = lista + "|" + item;
+      const row = tabla.insertRow();
+
+      const val = estado[key];
+
+      row.innerHTML = `
+        <td>${item}</td>
+        <td class="clickable ${val === 'Si' ? 'si' : ''}" onclick="marcar('${key}','Si')">✔</td>
+        <td class="clickable ${val === 'No' ? 'no' : ''}" onclick="marcar('${key}','No')">✖</td>
+      `;
+    });
+
+    contenedor.appendChild(tabla);
+  });
+}
+
+function marcar(key, valor) {
+  estado[key] = valor;
+  localStorage.setItem("checklist", JSON.stringify(estado));
+  render();
+}
+
+function limpiar() {
+  localStorage.removeItem("checklist");
+  estado = {};
+  render();
+}
+
+function descargar() {
+  let contenido = "Lista,Item,Estado\n";
+
+  Object.keys(estado).forEach(key => {
+    if (estado[key] === "Si") {
+      const [lista, item] = key.split("|");
+      contenido += `${lista},${item},Si\n`;
+    }
+  });
+
+  if (contenido === "Lista,Item,Estado\n") {
+    alert("No hay 'Sí' seleccionados");
+    return;
+  }
+
+  let blob = new Blob([contenido], { type: 'text/csv' });
+  let url = URL.createObjectURL(blob);
+
+  let a = document.createElement("a");
+  a.href = url;
+  a.download = "checklist.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+render();
+</script>
+
+</body>
+</html>
