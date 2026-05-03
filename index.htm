@@ -13,7 +13,7 @@
     }
     table {
       border-collapse: collapse;
-      width: 520px;
+      width: 700px;
       margin-bottom: 20px;
     }
     th, td {
@@ -34,6 +34,11 @@
     }
     .clickable {
       cursor: pointer;
+    }
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
     }
     button {
       margin-right: 10px;
@@ -89,6 +94,7 @@ function render() {
         <th>Item</th>
         <th>Si</th>
         <th>No</th>
+        <th>Observaciones</th>
       </tr>
     `;
 
@@ -96,12 +102,14 @@ function render() {
       const key = lista + "|" + item;
       const row = tabla.insertRow();
 
-      const val = estado[key];
+      const val = estado[key]?.valor || "";
+      const obs = estado[key]?.obs || "";
 
       row.innerHTML = `
         <td>${item}</td>
         <td class="clickable ${val === 'Si' ? 'si' : ''}" onclick="marcar('${key}','Si')">✔</td>
         <td class="clickable ${val === 'No' ? 'no' : ''}" onclick="marcar('${key}','No')">✖</td>
+        <td><input type="text" value="${obs}" oninput="guardarObs('${key}', this.value)"></td>
       `;
     });
 
@@ -110,9 +118,16 @@ function render() {
 }
 
 function marcar(key, valor) {
-  estado[key] = valor;
+  if (!estado[key]) estado[key] = {};
+  estado[key].valor = valor;
   localStorage.setItem("checklist", JSON.stringify(estado));
   render();
+}
+
+function guardarObs(key, texto) {
+  if (!estado[key]) estado[key] = {};
+  estado[key].obs = texto;
+  localStorage.setItem("checklist", JSON.stringify(estado));
 }
 
 function limpiar() {
@@ -122,16 +137,17 @@ function limpiar() {
 }
 
 function descargar() {
-  let contenido = "Lista,Item,Estado\n";
+  let contenido = "Lista,Item,Estado,Observacion\n";
 
   Object.keys(estado).forEach(key => {
-    if (estado[key] === "Si") {
+    if (estado[key].valor === "Si") {
       const [lista, item] = key.split("|");
-      contenido += `${lista},${item},Si\n`;
+      const obs = estado[key].obs || "";
+      contenido += `${lista},${item},Si,${obs}\n`;
     }
   });
 
-  if (contenido === "Lista,Item,Estado\n") {
+  if (contenido === "Lista,Item,Estado,Observacion\n") {
     alert("No hay 'Sí' seleccionados");
     return;
   }
