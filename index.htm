@@ -1,4 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Checklist App</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+    }
+
+    h3 {
+      margin-top: 25px;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 750px;
+      margin-bottom: 20px;
+    }
+
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+
+    th:first-child, td:first-child {
+      text-align: left;
+    }
+
+    .si {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .no {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .clickable {
+      cursor: pointer;
+    }
+
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
+    }
+
+    button {
+      margin: 5px;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    #resumen {
+      margin-top: 20px;
+      padding: 15px;
+      border: 2px solid #333;
+      width: 750px;
+      white-space: pre-wrap;
+      background: #f9f9f9;
+    }
+  </style>
+</head>
+
+<body>
+
+<h2>Checklist Diario</h2>
+
+<div id="contenedor"></div>
+
+<button onclick="descargar()">Descargar CSV</button>
+<button onclick="limpiar()">Restaurar todo</button>
+
+<h3>📋 Resumen para copiar</h3>
+<div id="resumen"></div>
+<button onclick="copiarResumen()">📎 Copiar resumen</button>
+
 <script>
+
 const LISTAS_BASE = {
   "Cosas del colegio": [
     "Casaca de buzo","Pantalon de buzo","3 polos manga larga","3 polos manga corta",
@@ -19,8 +102,7 @@ const LISTAS_BASE = {
   ]
 };
 
-// cargar listas guardadas o usar base
-let listas = JSON.parse(localStorage.getItem("listas")) || structuredClone(LISTAS_BASE);
+let listas = JSON.parse(localStorage.getItem("listas")) || JSON.parse(JSON.stringify(LISTAS_BASE));
 let estado = JSON.parse(localStorage.getItem("checklist")) || {};
 
 function guardarListas() {
@@ -32,11 +114,11 @@ function render() {
   contenedor.innerHTML = "";
 
   Object.keys(listas).forEach(lista => {
+
     const titulo = document.createElement("h3");
     titulo.textContent = lista;
     contenedor.appendChild(titulo);
 
-    // input agregar item
     const inputDiv = document.createElement("div");
     inputDiv.innerHTML = `
       <input type="text" id="input-${lista}" placeholder="Agregar item">
@@ -45,6 +127,7 @@ function render() {
     contenedor.appendChild(inputDiv);
 
     const tabla = document.createElement("table");
+
     tabla.innerHTML = `
       <tr>
         <th>Item</th>
@@ -74,6 +157,8 @@ function render() {
 
     contenedor.appendChild(tabla);
   });
+
+  actualizarResumen();
 }
 
 function agregarItem(lista) {
@@ -110,16 +195,41 @@ function guardarObs(key, texto) {
   if (!estado[key]) estado[key] = {};
   estado[key].obs = texto;
   localStorage.setItem("checklist", JSON.stringify(estado));
+  actualizarResumen();
 }
 
 function limpiar() {
-  localStorage.removeItem("checklist");
   localStorage.removeItem("listas");
+  localStorage.removeItem("checklist");
 
-  listas = structuredClone(LISTAS_BASE);
+  listas = JSON.parse(JSON.stringify(LISTAS_BASE));
   estado = {};
 
   render();
+}
+
+function actualizarResumen() {
+  let texto = "📋 RESUMEN CHECKLIST\n\n";
+
+  Object.keys(estado).forEach(key => {
+    if (estado[key].valor) {
+      const [lista, item] = key.split("|");
+      const estadoTxt = estado[key].valor;
+      const obs = estado[key].obs ? ` - Obs: ${estado[key].obs}` : "";
+
+      let icono = estadoTxt === "Si" ? "✔" : "✖";
+
+      texto += `${icono} ${lista} | ${item} => ${estadoTxt}${obs}\n`;
+    }
+  });
+
+  document.getElementById("resumen").innerText = texto;
+}
+
+function copiarResumen() {
+  const texto = document.getElementById("resumen").innerText;
+  navigator.clipboard.writeText(texto);
+  alert("Resumen copiado ✔");
 }
 
 function descargar() {
@@ -145,4 +255,8 @@ function descargar() {
 }
 
 render();
+
 </script>
+
+</body>
+</html>
